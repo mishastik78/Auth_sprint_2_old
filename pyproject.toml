@@ -1,0 +1,25 @@
+[tool.poetry]
+name = "auth_sprint_1"
+version = "0.1.0"
+description = ""
+authors = ["mishastik78 <mishastik78@yande.ru>"]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+Flask = "^2.1.2"
+Flask-SQLAlchemy = "^2.5.1"
+redis = "^4.3.4"
+Flask-Migrate = "^3.1.0"
+python-dotenv = "^0.20.0"
+psycopg2-binary = "^2.9.3"
+Flask-Security-Too = {extras = ["fsqla", "common"], version = "^4.1.4"}
+Flask-JWT-Extended = {extras = ["asymmetric_crypto"], version = "^4.4.2"}
+argon2-cffi = "^21.3.0"
+
+[tool.poetry.dev-dependencies]
+flake8 = "^4.0.1"
+autopep8 = "^1.6.0"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
