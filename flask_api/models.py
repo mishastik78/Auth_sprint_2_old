@@ -2,7 +2,6 @@ import uuid
 
 from passlib.hash import argon2 as hasher
 from sqlalchemy.dialects.postgresql import UUID
-
 from flask_api import db
 
 from .utils import utc_now
@@ -22,6 +21,14 @@ class IdTimeStampedMixin:
 class Role(db.Model, IdTimeStampedMixin):
     name = db.Column(db.String(80), unique=True, nullable=False)
     description = db.Column(db.String(255))
+
+    @classmethod
+    def find_by_name(cls, name):
+        return cls.query.filter_by(name=name).one_or_none()
+
+    @classmethod
+    def find_by_id(cls, id):
+        return cls.query.filter_by(id=id).one_or_none()
 
     def __repr__(self):
         return f'<Role {self.name}>'
@@ -46,8 +53,13 @@ class User(db.Model, IdTimeStampedMixin):
     def verify_password(self, password: str):
         return hasher.verify(password, self._password_hash)
 
-    def get_jwt(self):
-        pass
+    def add_history(self, action, info=None):
+        row = History(action=action, additional_info=info, user=self)
+        db.session.add(row)
+        db.session.commit()
+
+    def get_history(self, limit=None):
+        return History.query.filter_by(user=self).order_by(History.created_at.desc()).limit(limit).all()
 
     @classmethod
     def find_by_email(cls, email):
@@ -66,4 +78,4 @@ class History(db.Model):
     created_at = db.Column(db.DateTime, nullable=False, default=utc_now, primary_key=True)
     action = db.Column(db.String(50), nullable=False)
     additional_info = db.Column(db.Text)
-    user = db.relationship(User, backref='log')
+    user = db.relationship(User, backref='history')

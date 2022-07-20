@@ -1,8 +1,9 @@
-from http import HTTPStatus
-
-from flask_jwt_extended import jwt_required
+from flask_jwt_extended import get_jwt, jwt_required
 from flask_restx import Namespace, Resource
+from flask_restx._http import HTTPStatus
 
+from .business import (changing, create_user, get_history, login_user,
+                       logout_user, refresh_tokens, validate_request)
 from .models import auth_model, changing_model, history_model, tokens_model
 
 acc = Namespace("account", description="Account operations", validate=True)
@@ -15,61 +16,66 @@ acc.models[history_model.name] = history_model
 @acc.route('/signup')
 class SignUp(Resource):
     @acc.expect(auth_model)
-    @acc.response(int(HTTPStatus.CREATED), "New user was successfully created.", tokens_model)
-    @acc.response(int(HTTPStatus.CONFLICT), "Email address is already registered.")
-    @acc.response(int(HTTPStatus.BAD_REQUEST), "Validation error.")
+    @acc.marshal_with(tokens_model, code=HTTPStatus.CREATED)
+    @acc.response(int(HTTPStatus.CONFLICT), 'Email address is already registered.')
+    @acc.response(int(HTTPStatus.BAD_REQUEST), 'Validation error.')
     @acc.response(int(HTTPStatus.INTERNAL_SERVER_ERROR), "Internal server error.")
     def post(self):
         '''Register a new user and return tokens.'''
-        pass
+        email, password = validate_request(acc.payload)
+        return create_user(email, password)
 
 
 @acc.route('/login')
 class LogIn(Resource):
     @acc.expect(auth_model)
-    @acc.response(int(HTTPStatus.OK), "Login succeeded.", tokens_model)
+    @acc.marshal_with(tokens_model, code=HTTPStatus.OK)
     @acc.response(int(HTTPStatus.UNAUTHORIZED), "Email and/or password does not match.")
     @acc.response(int(HTTPStatus.BAD_REQUEST), "Validation error.")
     @acc.response(int(HTTPStatus.INTERNAL_SERVER_ERROR), "Internal server error.")
     def post(self):
         '''Authenticate an existing user and return tokens.'''
-        pass
+        email, password = validate_request(acc.payload)
+        return login_user(email, password)
 
 
 @acc.route('/logout')
 class LogOut(Resource):
-    @jwt_required(verify_type=False)
-    @acc.doc(security=('AccessJWT', 'RefreshJWT'))
-    @acc.response(int(HTTPStatus.OK), "Succeeded, token is no longer valid.")
-    @acc.response(int(HTTPStatus.BAD_REQUEST), "Token is invalid or no token.")
+    @jwt_required()
+    @acc.doc(security='Bearer')
+    @acc.response(int(HTTPStatus.OK), "Succeeded, tokens is no longer valid.")
+    @acc.response(int(HTTPStatus.UNAUTHORIZED), "Token is invalid or no token.")
     @acc.response(int(HTTPStatus.INTERNAL_SERVER_ERROR), "Internal server error.")
     def delete(self):
         '''
-        Mark token as invoked, deauthenticating the current user.
-        Must be called for Access and Refresh Tokens separately.
+        Mark tokens as invoked, deauthenticating the current user.
+        Must be called for Access token only.
         '''
-        pass
+        jwt = get_jwt()
+        return logout_user(jwt)
 
 
 @acc.route('/refresh')
 class TokensRefresh(Resource):
     @jwt_required(refresh=True)
-    @acc.doc(security='RefreshJWT')
-    @acc.response(int(HTTPStatus.OK), "Refresh succeeded.", tokens_model)
+    @acc.doc(security='Bearer')
+    @acc.marshal_with(tokens_model, code=HTTPStatus.OK)
     @acc.response(int(HTTPStatus.UNAUTHORIZED), "Token expired or invoked, Login process required.")
     @acc.response(int(HTTPStatus.BAD_REQUEST), "Token is invalid or no token.")
     @acc.response(int(HTTPStatus.INTERNAL_SERVER_ERROR), "Internal server error.")
     def post(self):
         '''Generating new Access and Fefresh tokens.'''
-        pass
+        jwt = get_jwt()
+        return refresh_tokens(jwt)
 
 
 @acc.route('/changing-cridentials')
 class Change(Resource):
     @jwt_required()
-    @acc.doc(security='AccessJWT')
+    @acc.doc(security='Bearer')
     @acc.expect(changing_model)
-    @acc.response(int(HTTPStatus.OK), "Refresh succeeded.", tokens_model)
+    @acc.response(int(HTTPStatus.OK), "Changing succeeded.")
+    @acc.response(int(HTTPStatus.CONFLICT), 'Email address is already registered.')
     @acc.response(int(HTTPStatus.UNAUTHORIZED), "Token expired or invoked, Login required.")
     @acc.response(int(HTTPStatus.BAD_REQUEST), "Token is invalid or no token.")
     @acc.response(int(HTTPStatus.INTERNAL_SERVER_ERROR), "Internal server error.")
@@ -78,13 +84,15 @@ class Change(Resource):
         Canging user's email or/and password
         At least one of the fields is required.
         '''
-        pass
+        jwt = get_jwt()
+        api = acc.payload
+        return changing(jwt, api)
 
 
 @acc.route('/history')
 class UserHistory(Resource):
     @jwt_required()
-    @acc.doc(security='AccessJWT')
+    @acc.doc(security='Bearer')
     @acc.marshal_list_with(history_model, )
     @acc.response(int(HTTPStatus.OK), "History provided.", history_model)
     @acc.response(int(HTTPStatus.UNAUTHORIZED), "Token expired or invoked, refresh required.")
@@ -92,4 +100,4 @@ class UserHistory(Resource):
     @acc.response(int(HTTPStatus.INTERNAL_SERVER_ERROR), "Internal server error.")
     def get(self):
         '''Provides history of user's account actions.'''
-        pass
+        return get_history(get_jwt())

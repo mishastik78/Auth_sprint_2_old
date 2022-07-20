@@ -21,7 +21,7 @@ changing_model = SchemaModel(
     })
 
 tokens_model = Model(
-    'Generated_JWTs',
+    'Tokens',
     {
         'access_token': fields.String,
         'access_token_expired_utc': fields.DateTime(dt_format='rfc822'),
@@ -34,6 +34,6 @@ history_model = Model(
     'History',
     {
         'action': fields.String,
-        'datetime': fields.DateTime(dt_format='rfc822'),
+        'datetime': fields.DateTime(dt_format='rfc822', attribute='created_at'),
     }
 )
