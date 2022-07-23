@@ -1,11 +1,12 @@
-from flask import Blueprint
 import click
+from flask import Blueprint
+
 from flask_api.models import User, db
 
-cli = Blueprint('command', __name__)
+command = Blueprint('command', __name__)
 
 
-@cli.cli.command('create_superuser')
+@command.cli.command('create_superuser')
 @click.argument('email')
 @click.argument('password')
 def create(email, password):

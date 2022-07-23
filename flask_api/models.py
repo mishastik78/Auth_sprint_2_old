@@ -2,6 +2,7 @@ import uuid
 
 from passlib.hash import argon2 as hasher
 from sqlalchemy.dialects.postgresql import UUID
+
 from flask_api import db
 
 from .utils import utc_now

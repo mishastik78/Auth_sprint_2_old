@@ -1,15 +1,14 @@
-from abc import ABC, abstractmethod
-from typing import Any, Awaitable, Coroutine
-
 import redis
-from flask_api import app
+import os
+from dotenv import load_dotenv
+load_dotenv()
 
 
 class Cache:
     base: int = 0
 
     def __init__(self):
-        url = app.config['REDIS_URL'] + f'/{Cache.base}'
+        url = f"{os.environ.get('REDIS_HOST')}/{Cache.base}"
         Cache.base += 1
         self.cache = redis.from_url(url, max_connections=20, decode_responses=True)
 

@@ -1,5 +1,4 @@
-from flask_restx import Model, fields, SchemaModel
-
+from flask_restx import Model, SchemaModel, fields
 
 auth_model = Model(
     'Cridentials',

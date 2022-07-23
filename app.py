@@ -1,5 +1,5 @@
 from flask_api import app, db
-from flask_api.models import Role, User, History
+from flask_api.models import History, Role, User
 
 
 @app.shell_context_processor

@@ -1,6 +1,10 @@
-from flask_api.models import db, Role, User
+import uuid
+
 from flask_restx import abort
 from flask_restx._http import HTTPStatus
+
+from flask_api.security import revoke_access_tokens
+from flask_api.models import Role, User, db
 
 
 def create_role(body):
@@ -42,9 +46,21 @@ def validate_params(user_id, body) -> tuple[User, Role]:
     user = User.find_by_id(user_id)
     if not user:
         abort(HTTPStatus.NOT_FOUND, f'Not found user with {user_id=}', status='fail')
-    role = Role.find_by_name(body['name'])
+    try:
+        id = body.get('id')
+        if id:
+            id = uuid.UUID(id)
+    except ValueError:
+        abort(HTTPStatus.BAD_REQUEST, 'id not uuid type', status='fail')
+    name = None
+    if id:
+        role = Role.find_by_id(id)
+    elif name := body.get('name'):
+        role = Role.find_by_name(name)
+    else:
+        role = None
     if not role:
-        abort(HTTPStatus.NOT_FOUND, f'Not found role with name={body["name"]}', status='fail')
+        abort(HTTPStatus.NOT_FOUND, f'Not found role with {id=} or {name=}', status='fail')
     return user, role
 
 
@@ -52,6 +68,7 @@ def assign_role(user_id, body):
     user, role = validate_params(user_id, body)
     user.roles.append(role)
     db.session.commit()
+    revoke_access_tokens(user_id)
     return user
 
 
@@ -62,6 +79,7 @@ def unassign_role(user_id, body):
         db.session.commit()
     except ValueError:
         abort(HTTPStatus.NOT_FOUND, "Role doesn't assign to the user", status='fail')
+    revoke_access_tokens(user_id)
     return user
 
 

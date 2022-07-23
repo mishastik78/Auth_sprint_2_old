@@ -1,7 +1,8 @@
-from flask_api.models import db, User
 from flask_restx import abort
 from flask_restx._http import HTTPStatus
-from flask_api.jwt import create_tokens, TokensResponse, set_tokens_revoked
+
+from flask_api.security import TokensResponse, create_tokens, set_tokens_revoked
+from flask_api.models import User, db
 
 
 def validate_request(payload):
@@ -15,7 +16,7 @@ def validate_request(payload):
 
 def create_user(email: str, password: str) -> TokensResponse:
     if User.find_by_email(email):
-        abort(HTTPStatus.CONFLICT, f"'{email}' is already registered", status="fail")
+        abort(HTTPStatus.CONFLICT, f"'{email}' is already registered")
     new_user = User(email=email, password=password)
     new_user.add_history('SignUp')
     db.session.add(new_user)
@@ -28,7 +29,7 @@ def login_user(email: str, password: str) -> TokensResponse:
     if not user or not user.verify_password(password):
         if user:
             user.add_history('Wrong password')
-        abort(HTTPStatus.UNAUTHORIZED, "email or password does not match", status="fail")
+        abort(HTTPStatus.UNAUTHORIZED, "email or password does not match")
     user.add_history('LogIn success')
     return create_tokens(user)
 
@@ -50,7 +51,7 @@ def changing(jwt: dict, api):
     user: User = User.find_by_id(jwt['sub']['id'])
     if email := api.get('email'):
         if User.find_by_email(email):
-            abort(HTTPStatus.CONFLICT, "email address is already registered.", status="fail")
+            abort(HTTPStatus.CONFLICT, "email address is already registered.")
         user.add_history(f'Email changed from {user.email} to {email}')
         user.email = email
     if password := api.get('password'):

@@ -1,16 +1,18 @@
 """Global pytest fixtures."""
 import pytest
-from flask import Flask
+from flask_api import db as database, create_app, register_blueprints
+from flask_api.models import User
+from .config import TestConfig
+from flask import url_for, json
 
-from flask_api import create_app
-from flask_api_tutorial import db as database
-from flask_api_tutorial.models.user import User
-from tests.util import EMAIL, PASSWORD
+EMAIL = 'test1'
+PASSWORD = 'test1'
 
 
 @pytest.fixture
 def app():
-    app = Flask(__name__)
+    app = create_app(TestConfig)
+    register_blueprints(app)
     return app
 
 
@@ -33,3 +35,11 @@ def user(db):
     db.session.add(user)
     db.session.commit()
     return user
+
+
+@pytest.fixture
+def auth_user(client, user):
+    url = url_for('api_v1.login')
+    data = {'email': EMAIL, 'password': PASSWORD}
+    response = client.post(url, data=json.dumps(data), content_type="application/json",)
+    return response.json

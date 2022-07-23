@@ -13,7 +13,7 @@ acc.models[changing_model.name] = changing_model
 acc.models[history_model.name] = history_model
 
 
-@acc.route('/signup')
+@acc.route('/signup', endpoint='signup')
 class SignUp(Resource):
     @acc.expect(auth_model)
     @acc.marshal_with(tokens_model, code=HTTPStatus.CREATED)
@@ -23,10 +23,10 @@ class SignUp(Resource):
     def post(self):
         '''Register a new user and return tokens.'''
         email, password = validate_request(acc.payload)
-        return create_user(email, password)
+        return create_user(email, password), 201
 
 
-@acc.route('/login')
+@acc.route('/login', endpoint='login')
 class LogIn(Resource):
     @acc.expect(auth_model)
     @acc.marshal_with(tokens_model, code=HTTPStatus.OK)
@@ -39,7 +39,7 @@ class LogIn(Resource):
         return login_user(email, password)
 
 
-@acc.route('/logout')
+@acc.route('/logout', endpoint='logout')
 class LogOut(Resource):
     @jwt_required()
     @acc.doc(security='Bearer')
