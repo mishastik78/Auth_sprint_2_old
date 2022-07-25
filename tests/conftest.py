@@ -1,12 +1,18 @@
-"""Global pytest fixtures."""
+'''Global pytest fixtures.'''
 import pytest
-from flask_api import db as database, create_app, register_blueprints
-from flask_api.models import User
-from .config import TestConfig
-from flask import url_for, json
+from flask import json, url_for
+from flask_api import create_app
+from flask_api import db as database
+from flask_api import register_blueprints
+from flask_api.models import Role, User
 
-EMAIL = 'test1'
-PASSWORD = 'test1'
+from .config import TestConfig
+
+EMAIL = 'test1@test.test'
+PASSWORD = 'test1Test-'
+
+
+ADMIN_EMAIL = 'admin@test.test'
 
 
 @pytest.fixture
@@ -41,5 +47,24 @@ def user(db):
 def auth_user(client, user):
     url = url_for('api_v1.login')
     data = {'email': EMAIL, 'password': PASSWORD}
-    response = client.post(url, data=json.dumps(data), content_type="application/json",)
+    response = client.post(url, data=json.dumps(data), content_type='application/json')
     return response.json
+
+
+@pytest.fixture
+def auth_admin_header(client, db):
+    user = User(email=ADMIN_EMAIL, password=PASSWORD, is_superuser=True)
+    db.session.add(user)
+    db.session.commit()
+    url = url_for('api_v1.login')
+    data = {'email': ADMIN_EMAIL, 'password': PASSWORD}
+    response = client.post(url, data=json.dumps(data), content_type='application/json')
+    return {'Authorization': f'Bearer {response.json["access_token"]}'}
+
+
+@pytest.fixture
+def role(db):
+    role = Role(name='Test Role', description='Some description.')
+    db.session.add(role)
+    db.session.commit()
+    return role

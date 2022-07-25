@@ -5,7 +5,7 @@ from functools import wraps
 from typing import Any
 
 from flask import current_app
-from flask_jwt_extended import (JWTManager, create_access_token,
+from flask_jwt_extended import (create_access_token,
                                 create_refresh_token, decode_token, get_jti,
                                 get_jwt)
 from flask_jwt_extended.exceptions import NoAuthorizationError
@@ -61,7 +61,8 @@ def set_tokens_revoked(jwt_payload: dict):
 
 
 def revoke_access_tokens(user_id):
-    jwt_user_access_blocklist.set(user_id, datetime.timestamp(utc_now()), ex=app.config['JWT_ACCESS_TOKEN_EXPIRES'])
+    jwt_user_access_blocklist.set(str(user_id), datetime.timestamp(utc_now()),
+                                  ex=app.config['JWT_ACCESS_TOKEN_EXPIRES'])
 
 
 @jwt.token_in_blocklist_loader

@@ -22,8 +22,8 @@ class TestConfig:
     # JWT Extended
     JWT_SECRET_KEY = environ.get('JWT_SECRET_KEY')
     JWT_TOKEN_LOCATION = 'headers'
-    JWT_ACCESS_TOKEN_EXPIRES = timedelta(seconds=5)
-    JWT_REFRESH_TOKEN_EXPIRES = timedelta(seconds=10)
+    JWT_ACCESS_TOKEN_EXPIRES = timedelta(seconds=2)
+    JWT_REFRESH_TOKEN_EXPIRES = timedelta(seconds=3)
 
     # REST-X
     RESTX_MASK_SWAGGER = False

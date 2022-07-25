@@ -29,6 +29,8 @@ class Role(db.Model, IdTimeStampedMixin):
 
     @classmethod
     def find_by_id(cls, id):
+        if uuid.UUID(str(id)).version != 4:
+            raise ValueError
         return cls.query.filter_by(id=id).one_or_none()
 
     def __repr__(self):
@@ -68,6 +70,8 @@ class User(db.Model, IdTimeStampedMixin):
 
     @classmethod
     def find_by_id(cls, id):
+        if uuid.UUID(str(id)).version != 4:
+            raise ValueError
         return cls.query.filter_by(id=id).one_or_none()
 
     def __repr__(self):
@@ -77,6 +81,6 @@ class User(db.Model, IdTimeStampedMixin):
 class History(db.Model):
     user_id = db.Column(db.ForeignKey('user.id'), primary_key=True)
     created_at = db.Column(db.DateTime, nullable=False, default=utc_now, primary_key=True)
-    action = db.Column(db.String(50), nullable=False)
+    action = db.Column(db.String(255), nullable=True)
     additional_info = db.Column(db.Text)
     user = db.relationship(User, backref='history')
