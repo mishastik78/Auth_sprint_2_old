@@ -1,38 +1,24 @@
 from flask_restx import abort
 from flask_restx._http import HTTPStatus
 
-from flask_api.security import TokensResponse, create_tokens, set_tokens_revoked, revoke_access_tokens
 from flask_api.models import User, db
-import re
+from flask_api.security import (TokensResponse, create_tokens,
+                                revoke_access_tokens_by_user,
+                                revoke_refresh_tokens_by_user,
+                                set_tokens_revoked)
 
-re_email = re.compile(r'^[A-Za-z0-9\.\+_-]+@[A-Za-z0-9\._-]+\.[a-zA-Z]*$')
-re_password = re.compile(r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*\W)[A-Za-z\d\W]{8,20}$')
 
-
-def validate_request(payload):
+def validate_request(body):
     try:
-        email = payload['email']
-        password = payload['password']
+        email = body['email']
+        password = body['password']
     except KeyError:
         abort(HTTPStatus.BAD_REQUEST)
     return email, password
 
 
-def validate_email(email):
-    if not re.search(re_email, email):
-        abort(HTTPStatus.BAD_REQUEST, f"'{email}' is not valid email address")
-    return email
-
-
-def validate_password(password):
-    if not re.search(re_password, password):
-        abort(HTTPStatus.BAD_REQUEST, f"'{password}' is not valid password (8-20chars, A-Za-z\\d\\W")
-    return password
-
-
-def create_user(email: str, password: str) -> TokensResponse:
-    email = validate_email(email)
-    password = validate_password(password)
+def create_user(body) -> TokensResponse:
+    email, password = validate_request(body)
     if User.find_by_email(email):
         abort(HTTPStatus.CONFLICT, f"'{email}' is already registered")
     new_user = User(email=email, password=password)
@@ -42,7 +28,8 @@ def create_user(email: str, password: str) -> TokensResponse:
     return create_tokens(new_user)
 
 
-def login_user(email: str, password: str) -> TokensResponse:
+def login_user(body) -> TokensResponse:
+    email, password = validate_request(body)
     user: User = User.find_by_email(email)
     if not user or not user.verify_password(password):
         if user:
@@ -54,31 +41,41 @@ def login_user(email: str, password: str) -> TokensResponse:
 
 def logout_user(payload: dict):
     user = User.find_by_id(payload['sub']['id'])
-    set_tokens_revoked(payload)
+    if not set_tokens_revoked(payload):
+        abort(HTTPStatus.INTERNAL_SERVER_ERROR, 'Tokens not revoked.')
     user.add_history('LogOut success')
     return {'status': f'success logout {user.email}'}, HTTPStatus.OK
 
 
+def completely_logout(payload: dict):
+    user = User.find_by_id(payload['sub']['id'])
+    if not (revoke_access_tokens_by_user(user.id) and revoke_refresh_tokens_by_user(user.id)):
+        abort(HTTPStatus.INTERNAL_SERVER_ERROR, 'Tokens not revoked.')
+    user.add_history('LogOut all profiles')
+    return create_tokens(user)
+
+
 def refresh_tokens(payload: dict):
     user = User.find_by_id(payload['sub']['id'])
-    set_tokens_revoked(payload)
+    if not set_tokens_revoked(payload):
+        abort(HTTPStatus.INTERNAL_SERVER_ERROR, 'Token not revoked.')
     return create_tokens(user)
 
 
 def changing(jwt: dict, api):
     user: User = User.find_by_id(jwt['sub']['id'])
     email = api.get('email')
-    if email and email != user.email and validate_email(email):
+    if email and email != user.email:
         if User.find_by_email(email):
             abort(HTTPStatus.CONFLICT, "email address is already registered.")
         user.add_history(f'Email changed from {user.email} to {email}')
         user.email = email
     if password := api.get('password'):
-        user.password = validate_password(password)
+        user.password = password
         user.add_history('Password changed')
     db.session.commit()
-    revoke_access_tokens(user.id)
-    return {'status': f'success change to {user.email}'}, HTTPStatus.OK
+    revoke_access_tokens_by_user(user.id)
+    return {'status': 'success changed'}, HTTPStatus.OK
 
 
 def get_history(jwt):

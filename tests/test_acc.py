@@ -5,12 +5,12 @@ from flask import json, url_for
 
 EMAIL = 'test1@test.test'
 PASSWORD = 'test1Test-'
+USER_CRED = json.dumps({'email': EMAIL, 'password': PASSWORD})
 
 
 def test_signup(client, db):
     url = url_for('api_v1.signup')
-    data = {'email': EMAIL, 'password': PASSWORD}
-    response = client.post(url, data=json.dumps(data), content_type='application/json')
+    response = client.post(url, data=USER_CRED, content_type='application/json')
     assert response.status_code == HTTPStatus.CREATED
     assert 'access_token' in response.json
     assert 'access_token_expired_utc' in response.json
@@ -21,9 +21,7 @@ def test_signup(client, db):
 def test_signup_errors(client, user):
     url = url_for('api_v1.signup')
     # Передаем занятый email
-    data = {'email': EMAIL, 'password': PASSWORD}
-    assert client.post(url, data=json.dumps(
-        data), content_type='application/json').status_code == HTTPStatus.CONFLICT
+    assert client.post(url, data=USER_CRED, content_type='application/json').status_code == HTTPStatus.CONFLICT
     # Передаем не email
     data = {'email': 'jfhsjkfhskjdh', 'password': PASSWORD}
     assert client.post(url, data=json.dumps(
@@ -35,8 +33,7 @@ def test_signup_errors(client, user):
 
 
 def test_login(client, user):
-    data = {'email': EMAIL, 'password': PASSWORD}
-    response = client.post(url_for('api_v1.login'), data=json.dumps(data), content_type='application/json')
+    response = client.post(url_for('api_v1.login'), data=USER_CRED, content_type='application/json')
     assert response.status_code == HTTPStatus.OK
     assert 'access_token' in response.json
     assert 'access_token_expired_utc' in response.json
@@ -54,6 +51,7 @@ def test_login_errors(client):
 @pytest.mark.parametrize('endpoint', ('api_v1.signup', 'api_v1.login'))
 @pytest.mark.parametrize('email, password', (('name', 'password'), ('email', 'pasword'), ('name', 'pasword')))
 def test_signup_login_wrong_param(client, db, user, endpoint, email, password):
+    # Передаем неверные ключи
     data = {email: EMAIL, password: PASSWORD}
     response = client.post(url_for(endpoint), data=json.dumps(data), content_type='application/json')
     assert response.status_code == HTTPStatus.BAD_REQUEST
@@ -82,6 +80,34 @@ def test_logout_errors(client, auth_user):
     assert client.delete(url, headers=headers).status_code == HTTPStatus.UNPROCESSABLE_ENTITY
 
 
+def test_comp_logout(client, user, auth_user):
+    # Создаем еще пару токенов для юзера
+    clone1 = client.post(url_for('api_v1.login'), data=USER_CRED, content_type='application/json').json
+    clone2 = client.post(url_for('api_v1.login'), data=USER_CRED, content_type='application/json').json
+    assert clone1 != clone2
+    # Проверяем что все токены валидны
+    for user in (auth_user, clone1, clone2):
+        assert client.get(url_for('api_v1.auth'), headers={
+                          'Authorization': f'Bearer {user["access_token"]}'}) == HTTPStatus.OK
+    # Отзываем все токены юзера
+    response = client.delete(url_for('api_v1.completely_logout'), headers={
+        'Authorization': f'Bearer {auth_user["access_token"]}'})
+    assert response.status_code == HTTPStatus.OK
+    # Запоминаем новые токены
+    auth_user = response.json
+    # Проверяем что все токены отозваны
+    for user in (clone1, clone2):
+        assert client.get(url_for('api_v1.auth'), headers={
+                          'Authorization': f'Bearer {user["access_token"]}'}) == HTTPStatus.UNAUTHORIZED
+        assert client.post(url_for('api_v1.refresh'), headers={
+            'Authorization': f'Bearer {user["refresh_token"]}'}) == HTTPStatus.UNAUTHORIZED
+    # Проверяем что вновь выданные токены валидны
+    assert client.get(url_for('api_v1.auth'), headers={
+        'Authorization': f'Bearer {auth_user["access_token"]}'}) == HTTPStatus.OK
+    assert client.post(url_for('api_v1.refresh'), headers={
+        'Authorization': f'Bearer {auth_user["refresh_token"]}'}) == HTTPStatus.OK
+
+
 def test_refresh(client, auth_user):
     headers = {'Authorization': f'Bearer {auth_user["refresh_token"]}'}
     response = client.post(url_for('api_v1.refresh'), headers=headers)
@@ -90,6 +116,8 @@ def test_refresh(client, auth_user):
     assert 'access_token_expired_utc' in response.json
     assert 'refresh_token' in response.json
     assert 'refresh_token_expired_utc' in response.json
+    # Проверяем что второй раз токен не сработает
+    assert client.post(url_for('api_v1.refresh'), headers=headers).status_code == HTTPStatus.UNAUTHORIZED
 
 
 def test_refresh_errors(client, auth_user):
@@ -117,18 +145,15 @@ def test_changing(client, auth_user):
     response = client.post(url_for('api_v1.login'), data=json.dumps(data), content_type='application/json')
     assert response.status_code == HTTPStatus.OK
     # а со старыми не можем
-    data = {'email': EMAIL, 'password': PASSWORD}
-    response = client.post(url_for('api_v1.login'), data=json.dumps(data), content_type='application/json')
+    response = client.post(url_for('api_v1.login'), data=USER_CRED, content_type='application/json')
     assert response.status_code == HTTPStatus.UNAUTHORIZED
 
 
 def test_changing_errors(client, auth_user):
     url = url_for('api_v1.changing')
-    data = {'email': EMAIL, 'password': PASSWORD}
     headers = {'Authorization': f'Bearer {auth_user["access_token"]}'}
     # Отправляем запрос без токена
-    assert client.patch(url, data=json.dumps(
-        data), headers={'Authorization': 'Bearer '}).status_code == HTTPStatus.BAD_REQUEST
+    assert client.patch(url, data=USER_CRED, headers={'Authorization': 'Bearer '}).status_code == HTTPStatus.BAD_REQUEST
     # Передаем не email
     data = {'email': 'jfhsjkfhskjdh', 'password': PASSWORD}
     assert client.patch(url, data=json.dumps(

@@ -1,6 +1,7 @@
 from http import HTTPStatus
 
 from flask import json, url_for
+
 from flask_api.models import Role
 
 
@@ -66,7 +67,7 @@ def test_delete_errors(client, user, auth_user, auth_admin_header):
     # Пытаемся передать валидный uuid, но которого нет в базе ролей
     response = client.delete(url_for('api_v1.manage'), data=json.dumps(
         {'id': user.id}), headers=auth_admin_header, content_type='application/json')
-    assert response.status_code == HTTPStatus.NOT_FOUND
+    assert response.status_code == HTTPStatus.BAD_REQUEST
     # Пытаемся передать не id
     response = client.delete(url_for('api_v1.manage'), data=json.dumps(
         {'role_id': user.id}), headers=auth_admin_header, content_type='application/json')
@@ -116,7 +117,7 @@ def test_patch_errors(client, role, user, auth_user, auth_admin_header):
     data = {'id': user.id, 'new_name': 'New Role'}
     response = client.patch(url_for('api_v1.manage'), data=json.dumps(
         data), headers=auth_admin_header, content_type='application/json')
-    assert response.status_code == HTTPStatus.NOT_FOUND
+    assert response.status_code == HTTPStatus.BAD_REQUEST
     # Посылаем запрос без админских прав
     response = client.patch(url_for('api_v1.manage'), data=json.dumps(
         data), content_type='application/json', headers={'Authorization': f'Bearer {auth_user["access_token"]}'})
@@ -129,6 +130,7 @@ def test_assign_role(client, user, role, auth_user, auth_admin_header):
         data), headers=auth_admin_header, content_type='application/json')
     assert response.status_code == HTTPStatus.OK
     assert role in user.roles
+    # Проверяем что токен отозван
     response = client.get(url_for('api_v1.auth'), headers={'Authorization': f'Bearer {auth_user["access_token"]}'})
     assert response.status_code == HTTPStatus.UNAUTHORIZED
 
@@ -138,7 +140,7 @@ def test_assign_errors(client, user, role, auth_user, auth_admin_header):
     data = {'user_id': role.id, 'role_id': user.id}
     response = client.post(url_for('api_v1.assign'), data=json.dumps(
         data), headers=auth_admin_header, content_type='application/json')
-    assert response.status_code == HTTPStatus.NOT_FOUND
+    assert response.status_code == HTTPStatus.BAD_REQUEST
     # Посылаем запрос без админских прав
     response = client.post(url_for('api_v1.assign'), data=json.dumps(
         data), content_type='application/json', headers={'Authorization': f'Bearer {auth_user["access_token"]}'})
@@ -153,6 +155,7 @@ def test_unassign_role(client, db, user, role, auth_user, auth_admin_header):
         data), headers=auth_admin_header, content_type='application/json')
     assert response.status_code == HTTPStatus.OK
     assert role not in user.roles
+    # Проверяем что токен отозван
     response = client.get(url_for('api_v1.auth'), headers={'Authorization': f'Bearer {auth_user["access_token"]}'})
     assert response.status_code == HTTPStatus.UNAUTHORIZED
 
@@ -162,29 +165,32 @@ def test_unassign_errors(client, user, role, auth_user, auth_admin_header):
     data = {'user_id': role.id, 'role_id': user.id}
     response = client.delete(url_for('api_v1.assign'), data=json.dumps(
         data), headers=auth_admin_header, content_type='application/json')
-    assert response.status_code == HTTPStatus.NOT_FOUND
+    assert response.status_code == HTTPStatus.BAD_REQUEST
     # Посылаем запрос без админских прав
     response = client.delete(url_for('api_v1.assign'), data=json.dumps(
         data), content_type='application/json', headers={'Authorization': f'Bearer {auth_user["access_token"]}'})
     assert response.status_code == HTTPStatus.UNAUTHORIZED
 
 
-def test_view_roles(client, db, user, role, auth_admin_header):
+def test_check_roles(client, db, user, role, auth_admin_header):
     user.roles.append(role)
     db.session.commit()
-    response = client.get(url_for('api_v1.view', user_id=user.id), headers=auth_admin_header)
-    assert response.status_code == HTTPStatus.OK
-    assert next((item for item in response.json['roles'] if item['name'] == 'Test Role'), False)
+    data = {'user_id': user.id, 'role_id': role.id}
+    assert client.get(url_for('api_v1.assign'), data=json.dumps(
+        data), content_type='application/json', headers=auth_admin_header).status_code == HTTPStatus.OK
 
 
-def test_view_errors(client, auth_user, role, auth_admin_header):
+def test_check_errors(client, user, auth_user, role, auth_admin_header):
     # Посылаем неверный id
-    response = client.get(url_for('api_v1.view', user_id='gvyicih vkuftccg'), headers=auth_admin_header)
-    assert response.status_code == HTTPStatus.NOT_FOUND
+    data = {'user_id': 'gvyicih vkuftccg', 'role_id': 'gvyicih vkuftccg'}
+    assert client.get(url_for('api_v1.assign'), headers=auth_admin_header, data=json.dumps(
+        data), content_type='application/json').status_code == HTTPStatus.BAD_REQUEST
     # Посылаем uuid несуществующего пользователя
-    response = client.get(url_for('api_v1.view', user_id=role.id), headers=auth_admin_header)
-    assert response.status_code == HTTPStatus.NOT_FOUND
+    data = {'user_id': role.id, 'role_id': user.id}
+    assert client.get(url_for('api_v1.assign'), headers=auth_admin_header, data=json.dumps(
+        data), content_type='application/json').status_code == HTTPStatus.BAD_REQUEST
     # Посылаем запрос без админских прав
-    response = client.get(url_for('api_v1.view', user_id=role.id), headers={
-                          'Authorization': f'Bearer {auth_user["access_token"]}'})
-    assert response.status_code == HTTPStatus.UNAUTHORIZED
+    data = {'user_id': user.id, 'role_id': role.id}
+    assert client.get(url_for('api_v1.assign'), data=json.dumps(
+        data), content_type='application/json', headers={
+        'Authorization': f'Bearer {auth_user["access_token"]}'}).status_code == HTTPStatus.UNAUTHORIZED

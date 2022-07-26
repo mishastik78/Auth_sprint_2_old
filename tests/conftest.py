@@ -1,6 +1,7 @@
 '''Global pytest fixtures.'''
 import pytest
 from flask import json, url_for
+
 from flask_api import create_app
 from flask_api import db as database
 from flask_api import register_blueprints

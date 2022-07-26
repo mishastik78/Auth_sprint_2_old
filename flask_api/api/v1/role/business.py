@@ -1,7 +1,8 @@
-from flask_api.models import Role, User, db
-from flask_api.security import revoke_access_tokens
 from flask_restx import abort
 from flask_restx._http import HTTPStatus
+
+from flask_api.models import Role, User, db
+from flask_api.security import revoke_access_tokens_by_user
 
 
 def create_role(body):
@@ -25,7 +26,7 @@ def get_role_by_id(id):
     except ValueError:
         abort(HTTPStatus.BAD_REQUEST, 'Role ID is not valid uuid ver.4.')
     if not role:
-        abort(HTTPStatus.NOT_FOUND, f'Not found role with {id=}.')
+        abort(HTTPStatus.BAD_REQUEST, f'Not found role with {id=}.')
     return role
 
 
@@ -35,7 +36,7 @@ def get_user_by_id(id):
     except ValueError:
         abort(HTTPStatus.BAD_REQUEST, 'User ID is not valid uuid ver.4.')
     if not user:
-        abort(HTTPStatus.NOT_FOUND, f'Not found user with {id=}.')
+        abort(HTTPStatus.BAD_REQUEST, f'Not found user with {id=}.')
     return user
 
 
@@ -60,26 +61,27 @@ def edit_role(body):
 def assign_role(body):
     user = get_user_by_id(body['user_id'])
     role = get_role_by_id(body['role_id'])
-    user.roles.append(role)
-    db.session.commit()
-    revoke_access_tokens(user.id)
-    return user
+    if role not in user.roles:
+        user.roles.append(role)
+        db.session.commit()
+        revoke_access_tokens_by_user(user.id)
+    return {'status': 'success'}
 
 
 def unassign_role(body):
     user = get_user_by_id(body['user_id'])
     role = get_role_by_id(body['role_id'])
-    try:
-        user.roles.remove(role)
-        db.session.commit()
-    except ValueError:
+    if role not in user.roles:
         abort(HTTPStatus.NOT_FOUND, "Role doesn't assign to the user.")
-    revoke_access_tokens(user.id)
-    return user
+    user.roles.remove(role)
+    db.session.commit()
+    revoke_access_tokens_by_user(user.id)
+    return {'status': 'success'}
 
 
-def get_user_roles(user_id):
-    user = get_user_by_id(user_id)
-    if not user:
-        abort(HTTPStatus.NOT_FOUND, f'Not found user with {user_id=}.')
-    return user
+def check_user_role(body):
+    user = get_user_by_id(body['user_id'])
+    role = get_role_by_id(body['role_id'])
+    if role not in user.roles:
+        abort(HTTPStatus.NOT_FOUND, "Role doesn't assign to the user.")
+    return {'status': 'success'}

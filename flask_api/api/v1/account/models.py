@@ -1,20 +1,26 @@
 from flask_restx import Model, SchemaModel, fields
 
-auth_model = Model(
+create_model = Model(
+    'Cridentials_new',
+    {
+        'email': fields.String(required=True, pattern=r'^[A-Za-z0-9\.\+_-]+@[A-Za-z0-9\._-]+\.[a-zA-Z]*$'),
+        'password': fields.String(required=True, pattern=r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*\W)[A-Za-z\d\W]{8,20}$'),
+    },
+)
+login_model = Model(
     'Cridentials',
     {
         'email': fields.String(required=True),
         'password': fields.String(required=True),
     },
 )
-
 changing_model = SchemaModel(
     'Changing',
     {
         'type': 'object',
         'properties': {
-            'email': {'type': 'string'},
-            'password': {'type': 'string'},
+            'email': {'type': 'string', 'pattern': r'^[A-Za-z0-9\.\+_-]+@[A-Za-z0-9\._-]+\.[a-zA-Z]*$'},
+            'password': {'type': 'string', 'pattern': r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*\W)[A-Za-z\d\W]{8,20}$'},
         },
         'anyOf': [{'required': ['email']}, {'required': ['password']}]
     })

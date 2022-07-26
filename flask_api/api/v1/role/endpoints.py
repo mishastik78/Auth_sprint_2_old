@@ -5,8 +5,9 @@ from flask_restx._http import HTTPStatus
 from flask_api.security import admin_required
 
 from .business import (assign_role, create_role, delete_role, edit_role,
-                       get_roles, get_user_roles, unassign_role)
-from .models import role_assign_model, role_create_model, user_roles, role_patch_model, role_delete_model
+                       get_roles, check_user_role, unassign_role)
+from .models import (role_assign_model, role_create_model, role_delete_model,
+                     role_patch_model, user_roles)
 
 role = Namespace("role", description="Roles accounts operations", validate=True)
 role.models[role_create_model.name] = role_create_model
@@ -28,14 +29,20 @@ class Roles(Resource):
     @role.response(int(HTTPStatus.CONFLICT), 'Role with given name exists.')
     @role.response(int(HTTPStatus.BAD_REQUEST), 'Validation error.')
     def post(self):
-        '''Create role'''
+        '''
+        Create role.
+        Access token with admin permissions required.
+        '''
         return create_role(role.payload), HTTPStatus.CREATED
 
     @jwt_required()
     @admin_required
     @role.marshal_list_with(role_create_model, code=HTTPStatus.OK)
     def get(self):
-        '''Receive all roles'''
+        '''
+        Receive all roles.
+        Access token with admin permissions required.
+        '''
         return get_roles()
 
     @jwt_required()
@@ -46,7 +53,10 @@ class Roles(Resource):
     @role.response(int(HTTPStatus.BAD_REQUEST), "Validation error.")
     @role.response(int(HTTPStatus.NOT_FOUND), 'Role not found.')
     def patch(self):
-        '''Edit role'''
+        '''
+        Edit role.
+        Access token with admin permissions required.
+        '''
         return edit_role(role.payload)
 
     @jwt_required()
@@ -56,45 +66,48 @@ class Roles(Resource):
     @role.response(int(HTTPStatus.BAD_REQUEST), "Validation error.")
     @role.response(int(HTTPStatus.NOT_FOUND), 'Role not found.')
     def delete(self):
-        '''Delete role'''
+        '''
+        Delete role.
+        Access token with admin permissions required.
+        '''
         return delete_role(role.payload)
 
 
 @role.route('/assign', endpoint='assign')
 @role.doc(security='Bearer')
+@role.expect(role_assign_model)
 @role.response(int(HTTPStatus.UNAUTHORIZED), 'Token is invalid or no token or no admin permissions.')
 @role.response(int(HTTPStatus.INTERNAL_SERVER_ERROR), "Internal server error.")
+@role.response(int(HTTPStatus.BAD_REQUEST), "Validation error.")
 class Assign(Resource):
     @jwt_required()
     @admin_required
-    @role.expect(role_assign_model)
-    @role.response(int(HTTPStatus.BAD_REQUEST), "Validation error.")
-    @role.response(int(HTTPStatus.NOT_FOUND), 'User or Role not found.')
+    @role.response(int(HTTPStatus.OK), 'Success assigned.')
     def post(self):
-        '''Assign role to user'''
-        data = assign_role(role.payload)
-        return marshal(data, user_roles)
+        '''
+        Assign role to user.
+        Access token with admin permissions required.
+        '''
+        return assign_role(role.payload)
 
     @jwt_required()
     @admin_required
-    @role.expect(role_assign_model)
-    @role.response(int(HTTPStatus.BAD_REQUEST), "Validation error.")
-    @role.response(int(HTTPStatus.NOT_FOUND), 'User or Role not found.')
+    @role.response(int(HTTPStatus.OK), 'Success unassigned.')
+    @role.response(int(HTTPStatus.NOT_FOUND), "Role doesn't assign to the user.")
     def delete(self):
-        '''Remove role from user'''
-        data = unassign_role(role.payload)
-        return marshal(data, user_roles)
+        '''
+        Remove role from the user.
+        Access token with admin permissions required.
+        '''
+        return unassign_role(role.payload)
 
-
-@role.route('/view-user-roles/<uuid:user_id>', endpoint='view')
-@role.doc(security='Bearer')
-@role.response(int(HTTPStatus.UNAUTHORIZED), 'Token is invalid or no token or no admin permissions.')
-@role.response(int(HTTPStatus.INTERNAL_SERVER_ERROR), "Internal server error.")
-class ViewRoles(Resource):
     @jwt_required()
     @admin_required
-    @role.response(int(HTTPStatus.NOT_FOUND), 'User not found.')
-    def get(self, user_id):
-        '''Get all user's roles'''
-        data = get_user_roles(user_id)
-        return marshal(data, user_roles)
+    @role.response(int(HTTPStatus.OK), 'Role assign to the user.')
+    @role.response(int(HTTPStatus.NOT_FOUND), "Role doesn't assign to the user.")
+    def get(self):
+        '''
+        Check user has the role.
+        Access token with admin permissions required.
+        '''
+        return check_user_role(role.payload)
