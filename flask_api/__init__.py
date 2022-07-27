@@ -8,7 +8,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_api import config
 
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-                    level=logging.DEBUG)
+                    level=logging.INFO)
 logger = logging.getLogger(__name__)
 db = SQLAlchemy()
 migrate = Migrate()
