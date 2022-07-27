@@ -25,7 +25,7 @@ def test_create_errors(client, role, auth_user, auth_admin_header):
     # Посылаем запрос без админских прав
     response = client.post(url_for('api_v1.manage'), data=json.dumps(
         data), content_type='application/json', headers={'Authorization': f'Bearer {auth_user["access_token"]}'})
-    assert response.status_code == HTTPStatus.UNAUTHORIZED
+    assert response.status_code != HTTPStatus.OK
 
 
 def test_get_roles(client, role, auth_admin_header):

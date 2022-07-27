@@ -4,10 +4,12 @@ from datetime import datetime
 from functools import wraps
 from typing import Any
 
-from flask import current_app
+from flask import current_app, jsonify
 from flask_jwt_extended import (create_access_token, create_refresh_token,
                                 decode_token, get_jti, get_jwt)
 from flask_jwt_extended.exceptions import NoAuthorizationError
+from flask_restx import abort
+from flask_restx._http import HTTPStatus
 
 from flask_api import jwt
 from flask_api.models import User
@@ -82,7 +84,7 @@ def check_revoked_token(jwt_header, jwt_payload: dict):
     revoked_token = jwt_tokens_blocklist.get(jti)
     if revoked_token is not None:
         logger.debug('Token found in blocklist')
-        return True
+        abort(HTTPStatus.UNAUTHORIZED, 'Token has been revoked')
     # Проверяем заблокированных пользователей по user.id
     type = jwt_payload['type']
     user_id = jwt_payload['sub']['id']
@@ -93,7 +95,7 @@ def check_revoked_token(jwt_header, jwt_payload: dict):
         blocked_since = datetime.fromtimestamp(float(revoked_token))
         if blocked_since > iat:
             logger.debug('User found in blocklist with time (%s) later than iat (%s)', blocked_since, iat)
-            return True
+            abort(HTTPStatus.UNAUTHORIZED, 'Token has been revoked')
     return False
 
 
@@ -107,6 +109,11 @@ def admin_required(fn) -> Any:
         user_id = get_jwt()['sub']['id']
         user: User = User.find_by_id(user_id)
         if not user.is_superuser:
-            raise NoAuthorizationError('Admin permissions required')
+            abort(HTTPStatus.UNAUTHORIZED, 'Admin permissions required')
         return fn(*args, **kwargs)
     return decorator
+
+
+@jwt.revoked_token_loader
+def revoked_token_response(jwt_header, jwt_payload):
+    return jsonify(code=HTTPStatus.UNAUTHORIZED, err='Token has been revoked'), 401
