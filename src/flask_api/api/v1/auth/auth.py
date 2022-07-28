@@ -1,7 +1,9 @@
 from flask_jwt_extended import get_jwt, jwt_required
 from flask_restx import Namespace, Resource, fields, marshal
 from flask_restx._http import HTTPStatus
+
 from ..role.models import role_create_model
+
 auth = Namespace('auth', description='Validating access token, authenticate users.')
 
 user_roles_model = auth.model(
@@ -11,6 +13,7 @@ user_roles_model = auth.model(
         'roles': fields.List(fields.Nested(role_create_model))
     }
 )
+
 
 @auth.route('', endpoint='auth')
 @auth.doc(security='Bearer')

@@ -4,10 +4,11 @@ ignore =
 exclude =
     */__init__.py
     tests/,
-    migrations/,
+    **/migrations/,
     venv/,
     env/,
     .env*,
+    **/*wsgi*,
 per-file-ignores =
     */settings.py:E501
 max-line-length = 120

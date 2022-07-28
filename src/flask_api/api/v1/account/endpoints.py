@@ -4,7 +4,8 @@ from flask_restx._http import HTTPStatus
 
 from .business import (changing, completely_logout, create_user, get_history,
                        login_user, logout_user, refresh_tokens)
-from .models import create_model, login_model, changing_model, history_model, tokens_model
+from .models import (changing_model, create_model, history_model, login_model,
+                     tokens_model)
 
 acc = Namespace('account', description='Account operations', validate=True)
 acc.models[create_model.name] = create_model

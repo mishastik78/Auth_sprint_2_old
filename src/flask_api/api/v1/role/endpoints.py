@@ -4,8 +4,8 @@ from flask_restx._http import HTTPStatus
 
 from flask_api.security import admin_required
 
-from .business import (assign_role, create_role, delete_role, edit_role,
-                       get_roles, check_user_role, unassign_role)
+from .business import (assign_role, check_user_role, create_role, delete_role,
+                       edit_role, get_roles, unassign_role)
 from .models import (role_assign_model, role_create_model, role_delete_model,
                      role_patch_model, user_roles)
 
