@@ -1,6 +1,9 @@
 import os
 
+import dotenv
 import redis
+
+dotenv.load_dotenv()
 
 
 class Cache:
