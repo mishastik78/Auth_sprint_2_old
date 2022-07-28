@@ -1,0 +1,42 @@
+version: "3.9"
+
+volumes:
+  auth_data:
+  cache:
+
+services:
+  postgres:
+    image: postgres:${PG_VERSION}-alpine
+    restart: always
+    volumes:
+      - auth_data:/var/lib/postgresql/data/
+    environment:
+      - POSTGRES_DB=${DB_NAME}
+      - POSTGRES_USER=${DB_USERNAME}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+
+  redis:
+    image: redis:${REDIS_VERSION}-alpine
+    restart: always
+    command: redis-server --save 20 1 --loglevel warning --requirepass ${REDIS_PASSWORD}
+    volumes:
+      - cache:/data
+
+  auth_api:
+    build: .
+    image: mishastik78/auth_api:latest
+    depends_on:
+      - postgres
+      - redis
+    env_file:
+      - ./.env
+
+  nginx:
+    image: nginx:${NGINX_VERSION}-alpine
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/configs:/etc/nginx/conf.d:ro
+    ports:
+      - 80:80
+    depends_on:
+      - auth_api

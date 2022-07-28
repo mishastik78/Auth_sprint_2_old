@@ -1,4 +1,4 @@
-'''Global pytest fixtures.'''
+"""Global pytest fixtures."""
 import pytest
 from flask import json, url_for
 
