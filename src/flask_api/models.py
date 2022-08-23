@@ -42,7 +42,7 @@ class OAuthAccount(db.Model):
     created_at = db.Column(db.DateTime, nullable=False, default=utc_now)
     issuer = db.Column(db.String(255), nullable=False, primary_key=True)
     sub = db.Column(db.String(1024), nullable=False)
-    user = db.relationship('User', backref='ouaths')
+    user = db.relationship('User', backref='oauth_accs')
 
 
 class User(db.Model, IdTimeStampedMixin):
@@ -84,8 +84,8 @@ class User(db.Model, IdTimeStampedMixin):
 
     @classmethod
     def find_by_oauth(cls, issuer, sub):
-        user_id = OAuthAccount.query.filter_by(issuer=issuer, sub=sub).first()
-        return cls.find_by_id(id=user_id) if user_id else None
+        acc = OAuthAccount.query.filter_by(issuer=issuer, sub=sub).one_or_none()
+        return acc.user if acc else None
 
     def __repr__(self):
         return f'<User {self.email}>'

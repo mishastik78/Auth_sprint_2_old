@@ -16,7 +16,6 @@ api = Api(
     authorizations=authorizations,
 )
 
-oauth.init_app(apiv1)
 api.add_namespace(oauth_ns, path='/oauth')
 api.add_namespace(acc, path='/account')
 api.add_namespace(role, path='/roles')
