@@ -4,7 +4,7 @@ import os
 from flask import make_response, request, url_for
 from flask_api import oauth
 from flask_api.config import Config
-from flask_jwt_extended import get_jwt, jwt_required, set_access_cookies
+from flask_jwt_extended import get_jwt, jwt_required, set_access_cookies, unset_access_cookies
 from flask_restx import Namespace, Resource, abort
 from flask_restx._http import HTTPStatus
 
@@ -42,14 +42,14 @@ class OAuthRequest(Resource):
         if not client:
             abort(HTTPStatus.NOT_FOUND, 'Given OAuth povider name not registered.')
         redirect_uri = url_for('api_v1.oauth_auth', name=name, _external=True)
-        resp = client.authorize_redirect(redirect_uri)
+        response = client.authorize_redirect(redirect_uri)
         header = request.headers.get('Authorization')
         if header:
             bearer = header.split(' ')[-1]
-            resp = make_response(resp)
+            response = make_response(response)
             logger.debug('set authorization cookies')
-            set_access_cookies(resp, bearer)
-        return resp
+            set_access_cookies(response, bearer)
+        return response
 
 
 @oauth_ns.route('/authorize/<name>', endpoint='oauth_auth')

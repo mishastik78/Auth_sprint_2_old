@@ -1,1 +1,1 @@
-from .endpoints import oauth_ns, oauth
+from .endpoints import oauth_ns
