@@ -1,10 +1,12 @@
+import logging
+import secrets
+import string
+
 from flask_restx import abort
 from flask_restx._http import HTTPStatus
+
+from flask_api.models import OAuthAccount, User, db
 from flask_api.security import create_tokens
-from flask_api.models import User, db, OAuthAccount
-import string
-import secrets
-import logging
 
 logger = logging.getLogger()
 

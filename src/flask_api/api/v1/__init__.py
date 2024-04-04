@@ -3,8 +3,8 @@ from flask_restx import Api
 
 from .account import acc
 from .auth import auth
-from .role import role
 from .oauth import oauth_ns
+from .role import role
 
 apiv1 = Blueprint('api_v1', __name__,)
 authorizations = {'Bearer': {'type': 'apiKey', 'in': 'header', 'name': 'Authorization'},}

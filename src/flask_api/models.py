@@ -97,5 +97,3 @@ class History(db.Model):
     action = db.Column(db.String(255), nullable=True)
     additional_info = db.Column(db.Text)
     user = db.relationship(User, backref='history')
-
-

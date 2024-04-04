@@ -2,11 +2,12 @@ import logging
 import os
 
 from flask import make_response, request, url_for
-from flask_api import oauth
-from flask_api.config import Config
-from flask_jwt_extended import get_jwt, jwt_required, set_access_cookies, unset_access_cookies
+from flask_jwt_extended import get_jwt, jwt_required, set_access_cookies
 from flask_restx import Namespace, Resource, abort
 from flask_restx._http import HTTPStatus
+
+from flask_api import oauth
+from flask_api.config import Config
 
 from ..account.models import tokens_model
 from .business import oauth_login_signup

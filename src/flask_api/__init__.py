@@ -1,11 +1,13 @@
 import logging
 
+from authlib.integrations.flask_client import OAuth
 from flask import Flask
 from flask_jwt_extended import JWTManager
 from flask_migrate import Migrate
 from flask_sqlalchemy import SQLAlchemy
-from authlib.integrations.flask_client import OAuth
+
 from flask_api import config
+
 from .cache import Cache
 
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
