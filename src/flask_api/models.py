@@ -37,6 +37,14 @@ class Role(db.Model, IdTimeStampedMixin):
         return f'<Role {self.name}>'
 
 
+class OAuthAccount(db.Model):
+    user_id = db.Column(db.ForeignKey('user.id'), primary_key=True)
+    created_at = db.Column(db.DateTime, nullable=False, default=utc_now)
+    issuer = db.Column(db.String(255), nullable=False, primary_key=True)
+    sub = db.Column(db.String(1024), nullable=False)
+    user = db.relationship('User', backref='oauth_accs')
+
+
 class User(db.Model, IdTimeStampedMixin):
     email = db.Column(db.String(255), unique=True, nullable=False)
     _password_hash = db.Column(db.String(255), nullable=False)
@@ -73,6 +81,11 @@ class User(db.Model, IdTimeStampedMixin):
         if uuid.UUID(str(id)).version != 4:
             raise ValueError
         return cls.query.filter_by(id=id).one_or_none()
+
+    @classmethod
+    def find_by_oauth(cls, issuer, sub):
+        acc = OAuthAccount.query.filter_by(issuer=issuer, sub=sub).one_or_none()
+        return acc.user if acc else None
 
     def __repr__(self):
         return f'<User {self.email}>'

@@ -3,6 +3,7 @@ from flask_restx import Api
 
 from .account import acc
 from .auth import auth
+from .oauth import oauth_ns
 from .role import role
 
 apiv1 = Blueprint('api_v1', __name__,)
@@ -15,7 +16,7 @@ api = Api(
     authorizations=authorizations,
 )
 
-
+api.add_namespace(oauth_ns, path='/oauth')
 api.add_namespace(acc, path='/account')
 api.add_namespace(role, path='/roles')
 api.add_namespace(auth, path='/auth')
